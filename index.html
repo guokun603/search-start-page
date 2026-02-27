@@ -22,23 +22,26 @@
   <!-- 主体：时钟 + 搜索框 -->
   <main class="center">
     <div class="clock" id="clock">--:--:--</div>
-
     <form class="search-box" id="searchForm">
-      <div class="engine-selector" id="engineSelector">
-        <div class="logo" id="engineLogo"></div>
-        <span class="engine-arrow">▾</span>
-        <div class="engine-dropdown" id="engineDropdown"></div>
-      </div>
+    <!-- 覆盖层：未聚焦时只看到它 -->
+    <div class="search-overlay" id="searchOverlay">
+      搜索
+    </div>
 
-      <input
-        class="search-input"
-        id="q"
-        type="search"
-        placeholder="请输入需要搜索的内容"
-        autocomplete="off"
-        autofocus
-      />
-      <button class="search-btn" type="submit">搜索</button>
+    <div class="engine-selector" id="engineSelector">
+      <div class="logo" id="engineLogo"></div>
+      <span class="engine-arrow">▾</span>
+      <div class="engine-dropdown" id="engineDropdown"></div>
+    </div>
+
+    <input
+      class="search-input"
+      id="q"
+      type="search"
+      placeholder="请输入需要搜索的内容"
+      autocomplete="off"
+    />
+    <button class="search-btn" type="submit">搜索</button>
     </form>
   </main>
 

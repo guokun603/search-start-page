@@ -343,6 +343,8 @@ function bindEngineDropdownEvents() {
   document.addEventListener('click', () => toggleDropdown(false));
 }
 
+  
+
 // ========== 5. 时钟相关 ==========
 
 function updateClock() {
@@ -350,14 +352,11 @@ function updateClock() {
   if (!clockEl) return;
 
   const now = new Date();
-  let h = now.getHours();
+  const h = String(now.getHours()).padStart(2, '0');   // 24 小时制
   const m = String(now.getMinutes()).padStart(2, '0');
   const s = String(now.getSeconds()).padStart(2, '0');
-  const ampm = h >= 12 ? 'PM' : 'AM';
-  h = h % 12 || 12;
-  const hh = String(h).padStart(2, '0');
 
-  clockEl.textContent = `${ampm} ${hh}:${m}:${s}`;
+  clockEl.textContent = `${h}:${m}:${s}`;
 }
 
 // ========== 6. 初始化入口 ==========
@@ -431,12 +430,40 @@ function init() {
     });
   }
 
-  // 搜索引擎
+   // 搜索引擎
   currentEngineKey = localStorage.getItem('currentEngine') || ENGINES[0].key;
   setEngine(currentEngineKey);
   renderEngineDropdown();
   bindSearchForm();
   bindEngineDropdownEvents();
+
+  // 搜索框覆盖层：未聚焦时只显示中间“搜索”
+  const searchBoxEl = document.getElementById('searchForm');
+  const searchInputEl = document.getElementById('q');
+  const searchOverlayEl = document.getElementById('searchOverlay');
+
+  if (searchBoxEl && searchInputEl && searchOverlayEl) {
+    // 初始为未聚焦状态（只有覆盖层）
+    searchBoxEl.classList.remove('focused');
+
+    // 点击覆盖层 -> 进入聚焦模式并聚焦输入框
+    searchOverlayEl.addEventListener('click', () => {
+      searchBoxEl.classList.add('focused');
+      searchInputEl.focus();
+    });
+
+    // 输入框获得焦点时，确保是聚焦样式
+    searchInputEl.addEventListener('focus', () => {
+      searchBoxEl.classList.add('focused');
+    });
+
+    // 输入框失焦：若内容为空，则恢复为仅显示“搜索”
+    searchInputEl.addEventListener('blur', () => {
+      if (!searchInputEl.value.trim()) {
+        searchBoxEl.classList.remove('focused');
+      }
+    });
+  }
 
   // 时钟
   updateClock();
