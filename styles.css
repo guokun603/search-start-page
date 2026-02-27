@@ -1,0 +1,406 @@
+/* ========== 1. 全局 & 基础样式 ========== */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  font-family: "Segoe UI", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+  overflow: hidden;
+  color: #fff;
+}
+
+/* 背景图 */
+.bg {
+  position: fixed;
+  inset: 0;
+  background: url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1920&q=80')
+    center/cover no-repeat;
+  filter: brightness(0.88);
+  z-index: -1;
+}
+
+/* ========== 2. 头部：壁纸按钮区域 ========== */
+.site-header {
+  position: relative;
+  z-index: 20;
+}
+
+/* 左上角：切换壁纸按钮热区 */
+.wallpaper-area {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 150px;
+  height: 70px;
+  padding: 12px 16px;
+  pointer-events: auto;
+  z-index: 20;
+}
+
+.wallpaper-btn {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  border: none;
+  border-radius: 999px;
+  padding: 6px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #fff;
+  background: linear-gradient(135deg, rgba(0,0,0,0.7), rgba(0,0,0,0.4));
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+}
+
+.wallpaper-area:hover .wallpaper-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.wallpaper-btn:hover {
+  background: linear-gradient(135deg, rgba(0,0,0,0.9), rgba(0,0,0,0.55));
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+}
+
+.wallpaper-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+
+/* ========== 3. 中心内容：时钟 + 搜索框 ========== */
+.center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  padding: 24px;
+  text-align: center;
+}
+
+.clock {
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: 1.8px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.65);
+}
+
+/* 搜索框整体 */
+.search-box {
+  width: min(780px, 92vw);
+  display: flex;
+  align-items: center;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.72));
+  border-radius: 28px;
+  padding: 8px 12px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(6px);
+  gap: 12px;
+}
+
+/* ========== 4. 搜索引擎选择器 ========== */
+.engine-selector {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 20px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+}
+
+.engine-selector:hover {
+  background: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.35);
+  transform: translateY(-1px);
+}
+
+.logo {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+}
+
+.logo img,
+.logo svg {
+  width: 26px;
+  height: 26px;
+}
+
+.engine-arrow {
+  font-size: 12px;
+  color: #555;
+}
+
+.engine-dropdown {
+  position: absolute;
+  top: 110%;
+  left: 0;
+  min-width: 150px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  border-radius: 12px;
+  padding: 6px 0;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+  display: none;
+  z-index: 100;
+}
+
+.engine-dropdown.open {
+  display: block;
+}
+
+.engine-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  color: #fff;
+  font-size: 14px;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+
+.engine-item:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.engine-item.active {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.engine-icon {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.engine-icon img,
+.engine-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* ========== 5. 搜索输入 & 按钮 ========== */
+.search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 16px;
+  color: #333;
+}
+
+.search-input:focus-visible {
+  outline: none;
+}
+
+.search-box:has(.search-input:focus) {
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.8),
+    0 0 40px rgba(255,255,255,0.35),
+    0 10px 28px rgba(0,0,0,0.45);
+}
+
+.search-btn {
+  border: none;
+  border-radius: 22px;
+  padding: 10px 22px;
+  font-size: 15px;
+  cursor: pointer;
+  color: #fff;
+  background: linear-gradient(120deg, #7f8fa6, #a6b1c2);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.search-btn:hover {
+  transform: translateY(-1px);
+}
+
+.search-btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.28);
+}
+
+/* ========== 6. 底部文案 ========== */
+.footer {
+  position: fixed;
+  bottom: 18px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
+  line-height: 1.6;
+  padding: 0 12px;
+  pointer-events: none;
+  max-width: 90vw;
+  margin: 0 auto;
+}
+
+/* ========== 7. 壁纸选择面板 ========== */
+.wallpaper-panel {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 15;
+}
+
+.wallpaper-panel.show {
+  pointer-events: auto;
+  opacity: 1;
+}
+
+/* 左边中间那一列区域：固定高度 + 内部滚动 */
+.wallpaper-panel-inner {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  padding-left: 16px;
+
+  height: 80vh;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+/* 一列纵向排布 + 毛玻璃背景 */
+.wallpaper-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 10px 10px 10px 4px;
+  border-radius: 24px;
+  background: rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+/* 美化滚动条（可选） */
+.wallpaper-panel-inner::-webkit-scrollbar {
+  width: 6px;
+}
+
+.wallpaper-panel-inner::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.wallpaper-panel-inner::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.35);
+  border-radius: 3px;
+}
+
+.wallpaper-panel-inner::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.6);
+}
+
+/* 壁纸卡片：统一尺寸 + 圆角 + 阴影 */
+.wallpaper-item {
+  width: 190px;
+  height: 110px;
+  border-radius: 18px;
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  border: 2px solid transparent;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
+  position: relative;
+  background: #000;
+}
+
+.wallpaper-item img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.wallpaper-item:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.55);
+  border-color: rgba(255, 255, 255, 0.85);
+}
+
+.wallpaper-item.active {
+  border-color: #ffd15c;
+}
+
+/* “添加图片”卡片 */
+.wallpaper-item.add-wallpaper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.12);
+  border-style: dashed;
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.wallpaper-item.add-wallpaper:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.9);
+}
+
+/* 加号 + 文本 */
+.add-wallpaper-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: #fff;
+  font-size: 13px;
+}
+
+.add-wallpaper-plus {
+  font-size: 28px;
+  line-height: 1;
+}
+
+/* 壁纸删除按钮 */
+.wallpaper-delete-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 12px;
+  line-height: 16px;
+  text-align: center;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+
+.wallpaper-item:hover .wallpaper-delete-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.wallpaper-delete-btn:hover {
+  background: rgba(255, 80, 80, 0.9);
+  border-color: rgba(255, 255, 255, 0.9);
+  transform: scale(1.05);
+}
