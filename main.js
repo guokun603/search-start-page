@@ -32,10 +32,13 @@ const INITIAL_DEFAULT_WALLPAPERS = [
   { type: 'image', url: 'https://images.unsplash.com/photo-1500534314211-0a24cd03f2c0?auto=format&fit=crop&w=1920&q=80' },
 ];
 
-// localStorage key
-const LS_CUSTOM   = 'customWallpapers_v2';         // v2：对象数组
+// 存储键名
 const LS_DISABLED = 'disabledDefaultWallpapers';
 const LS_INDEX    = 'wallpaperIndex';
+// IndexedDB 配置 - 用于存储视频壁纸（解决localStorage容量限制问题）
+const DB_NAME     = 'wallpaperDB';
+const DB_VERSION  = 1;
+const STORE_NAME  = 'customWallpapers';
 
 // 状态
 let disabledDefaultIndices = [];
@@ -70,33 +73,83 @@ function saveDisabledDefault() {
   }
 }
 
-function loadCustomWallpapers() {
+// 打开IndexedDB数据库 - 新增：用于存储视频壁纸
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+      }
+    };
+    
+    request.onsuccess = (event) => {
+      resolve(event.target.result);
+    };
+    
+    request.onerror = (event) => {
+      reject(event.target.error);
+    };
+  });
+}
+
+// 加载自定义壁纸 - 修改：使用IndexedDB替代localStorage，支持存储视频
+async function loadCustomWallpapers() {
   try {
-    const saved = localStorage.getItem(LS_CUSTOM);
-    if (!saved) return [];
-    const arr = JSON.parse(saved);
-    if (!Array.isArray(arr)) return [];
-    // 兼容老版本字符串数组
-    if (arr.length && typeof arr[0] === 'string') {
-      return arr.map(url => ({ type: 'image', url }));
-    }
-    return arr;
-  } catch {
+    const db = await openDB();
+    return new Promise((resolve) => {
+      const transaction = db.transaction(STORE_NAME, 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.getAll();
+      
+      request.onsuccess = (event) => {
+        const wallpapers = event.target.result || [];
+        console.log('从IndexedDB加载自定义壁纸:', wallpapers);
+        resolve(wallpapers);
+      };
+      
+      request.onerror = (event) => {
+        console.error('加载自定义壁纸失败:', event.target.error);
+        resolve([]);
+      };
+    });
+  } catch (e) {
+    console.error('打开数据库失败:', e);
     return [];
   }
 }
 
-function saveCustomWallpapers() {
+// 保存自定义壁纸 - 修改：使用IndexedDB替代localStorage，支持存储视频
+async function saveCustomWallpapers() {
   try {
-    // 不保存 blob: 的临时视频
-    const toSave = customWallpapers.filter(wp => {
-      if (wp.type === 'image') return true;
-      if (wp.type === 'video' && /^https?:/i.test(wp.url)) return true;
-      return false;
+    const db = await openDB();
+    return new Promise((resolve) => {
+      const transaction = db.transaction(STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      
+      // 清空现有数据
+      store.clear();
+      
+      // 保存新数据
+      customWallpapers.forEach((wp, index) => {
+        store.put({ ...wp, id: index + 1 });
+      });
+      
+      transaction.oncomplete = () => {
+        console.log('保存自定义壁纸成功');
+        resolve(true);
+      };
+      
+      transaction.onerror = (event) => {
+        console.error('保存自定义壁纸失败:', event.target.error);
+        resolve(false);
+      };
     });
-    localStorage.setItem(LS_CUSTOM, JSON.stringify(toSave));
   } catch (e) {
-    console.error('保存自定义壁纸失败:', e);
+    console.error('打开数据库失败:', e);
+    return false;
   }
 }
 
@@ -172,7 +225,7 @@ function resolveWallpaperIndex(idx) {
 }
 
 // 删除壁纸（默认 + 自定义）
-function deleteWallpaperByIndex(idx) {
+async function deleteWallpaperByIndex(idx) {
   if (idx < 0 || idx >= wallpapers.length) return;
 
   const ok = confirm('确认删除这张壁纸吗？');
@@ -191,7 +244,7 @@ function deleteWallpaperByIndex(idx) {
     }
   } else if (info.type === 'custom') {
     customWallpapers.splice(info.customIndex, 1);
-    saveCustomWallpapers();
+    await saveCustomWallpapers();
   }
 
   rebuildWallpapers();
@@ -261,9 +314,9 @@ function renderWallpaperList() {
     delBtn.className = 'wallpaper-delete-btn';
     delBtn.type = 'button';
     delBtn.textContent = '×';
-    delBtn.addEventListener('click', (e) => {
+    delBtn.addEventListener('click', async (e) => {
       e.stopPropagation();
-      deleteWallpaperByIndex(idx);
+      await deleteWallpaperByIndex(idx);
     });
     item.appendChild(delBtn);
 
@@ -393,10 +446,11 @@ function updateClock() {
 
 // ========== 6. 初始化入口 ==========
 
-function init() {
+// 初始化函数 - 修改：使用async/await处理异步操作
+async function init() {
   // 壁纸状态
   disabledDefaultIndices = loadDisabledDefault();
-  customWallpapers = loadCustomWallpapers();
+  customWallpapers = await loadCustomWallpapers();
   rebuildWallpapers();
   currentWallpaperIndex = loadWallpaperIndex();
   if (currentWallpaperIndex >= wallpapers.length) {
@@ -475,14 +529,24 @@ function init() {
 
         reader.readAsDataURL(file);
       } else {
-        // 视频：使用临时 object URL（当前会话有效）
-        const objectUrl = URL.createObjectURL(file);
-        customWallpapers.push({ type: 'video', url: objectUrl });
-        rebuildWallpapers();
-        currentWallpaperIndex = wallpapers.length - 1;
-        saveWallpaperIndex();
-        applyWallpaper(currentWallpaperIndex);
-        renderWallpaperList();
+        // 视频：使用 FileReader 读取为 dataURL 以便持久保存 - 修改：支持视频持久化存储
+        const reader = new FileReader();
+        reader.onload = async (ev) => {
+          const dataUrl = ev.target && ev.target.result;
+          if (!dataUrl) return;
+
+          customWallpapers.push({ type: 'video', url: dataUrl });
+          await saveCustomWallpapers(); // 保存到IndexedDB
+          rebuildWallpapers();
+
+          currentWallpaperIndex = wallpapers.length - 1;
+          saveWallpaperIndex();
+
+          applyWallpaper(currentWallpaperIndex);
+          renderWallpaperList();
+        };
+
+        reader.readAsDataURL(file);
       }
     });
   }
@@ -523,4 +587,7 @@ function init() {
   setInterval(updateClock, 1000);
 }
 
-init();
+// 调用初始化函数
+(async () => {
+  await init();
+})();
