@@ -24,6 +24,17 @@ body {
   z-index: -1;
 }
 
+/* 背景视频：默认隐藏，选到视频壁纸时显示 */
+#bgVideo {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;    /* 铺满并裁剪 */
+  z-index: -1;          /* 在内容后面，和 .bg 一样层级 */
+  display: none;        /* 默认不显示，选到 video 时再显示 */
+}
+
 /* ========== 2. 头部：壁纸按钮区域 ========== */
 .site-header {
   position: relative;
@@ -381,6 +392,13 @@ body {
   height: 100%;
   display: block;
   object-fit: cover;
+}
+
+.wallpaper-thumb-video {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;   /* 像图片一样铺满裁剪 */
 }
 
 .wallpaper-item:hover {

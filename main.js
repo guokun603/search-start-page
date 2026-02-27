@@ -24,26 +24,30 @@ const ENGINES = [
   { key: 'douyin', name: '抖音',    url: 'https://www.douyin.com/search/'          },
 ];
 
-// 初始默认壁纸
+// 初始默认壁纸（对象：image 类型）
 const INITIAL_DEFAULT_WALLPAPERS = [
-  'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1920&q=80',
-  'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1920&q=80',
-  'https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=1920&q=80',
-  'https://images.unsplash.com/photo-1500534314211-0a24cd03f2c0?auto=format&fit=crop&w=1920&q=80',
+  { type: 'image', url: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1920&q=80' },
+  { type: 'image', url: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1920&q=80' },
+  { type: 'image', url: 'https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=1920&q=80' },
+  { type: 'image', url: 'https://images.unsplash.com/photo-1500534314211-0a24cd03f2c0?auto=format&fit=crop&w=1920&q=80' },
 ];
 
 // localStorage key
-const LS_CUSTOM = 'customWallpapers';
+const LS_CUSTOM   = 'customWallpapers_v2';         // v2：对象数组
 const LS_DISABLED = 'disabledDefaultWallpapers';
-const LS_INDEX = 'wallpaperIndex';
+const LS_INDEX    = 'wallpaperIndex';
 
 // 状态
 let disabledDefaultIndices = [];
-let customWallpapers = [];
+let customWallpapers = []; // [{type:'image'|'video', url:string}]
 let defaultWallpapers = [];
-let wallpapers = [];
+let wallpapers = [];       // default + custom
 let currentWallpaperIndex = 0;
 let currentEngineKey = ENGINES[0].key;
+
+// 背景层引用
+const bgLayer = document.getElementById('bgLayer');
+const bgVideo = document.getElementById('bgVideo');
 
 // ========== 2. 工具函数：localStorage ==========
 
@@ -71,7 +75,12 @@ function loadCustomWallpapers() {
     const saved = localStorage.getItem(LS_CUSTOM);
     if (!saved) return [];
     const arr = JSON.parse(saved);
-    return Array.isArray(arr) ? arr : [];
+    if (!Array.isArray(arr)) return [];
+    // 兼容老版本字符串数组
+    if (arr.length && typeof arr[0] === 'string') {
+      return arr.map(url => ({ type: 'image', url }));
+    }
+    return arr;
   } catch {
     return [];
   }
@@ -79,7 +88,13 @@ function loadCustomWallpapers() {
 
 function saveCustomWallpapers() {
   try {
-    localStorage.setItem(LS_CUSTOM, JSON.stringify(customWallpapers));
+    // 不保存 blob: 的临时视频
+    const toSave = customWallpapers.filter(wp => {
+      if (wp.type === 'image') return true;
+      if (wp.type === 'video' && /^https?:/i.test(wp.url)) return true;
+      return false;
+    });
+    localStorage.setItem(LS_CUSTOM, JSON.stringify(toSave));
   } catch (e) {
     console.error('保存自定义壁纸失败:', e);
   }
@@ -113,11 +128,25 @@ function applyWallpaper(index) {
   if (index < 0 || index >= wallpapers.length) index = 0;
 
   currentWallpaperIndex = index;
-  const url = wallpapers[index];
+  const wp = wallpapers[index];
 
-  const bgLayer = document.getElementById('bgLayer');
-  if (bgLayer) {
-    bgLayer.style.backgroundImage = `url('${url}')`;
+  if (!bgLayer || !bgVideo) return;
+
+  if (wp.type === 'image') {
+    // 静态图片背景：显示 bgLayer，隐藏 video
+    bgVideo.pause();
+    bgVideo.removeAttribute('src');
+    bgVideo.load();
+    bgVideo.style.display = 'none';
+
+    bgLayer.style.backgroundImage = `url('${wp.url}')`;
+  } else if (wp.type === 'video') {
+    // 视频背景：显示 video，清空 bgLayer 背景
+    bgLayer.style.backgroundImage = 'none';
+
+    bgVideo.src = wp.url;
+    bgVideo.style.display = 'block';
+    bgVideo.play().catch(() => {});
   }
 
   saveWallpaperIndex();
@@ -133,8 +162,8 @@ function resolveWallpaperIndex(idx) {
   const defaultCount = currentDefaults.length;
 
   if (idx < defaultCount) {
-    const url = currentDefaults[idx];
-    const originIndex = INITIAL_DEFAULT_WALLPAPERS.indexOf(url);
+    const wp = currentDefaults[idx];
+    const originIndex = INITIAL_DEFAULT_WALLPAPERS.findIndex(d => d.url === wp.url);
     return { type: 'default', originIndex };
   }
 
@@ -169,7 +198,6 @@ function deleteWallpaperByIndex(idx) {
 
   if (!wallpapers.length) {
     localStorage.removeItem(LS_INDEX);
-    const bgLayer = document.getElementById('bgLayer');
     if (bgLayer) bgLayer.style.backgroundImage = 'none';
     const list = document.getElementById('wallpaperList');
     if (list) list.innerHTML = '';
@@ -198,14 +226,29 @@ function renderWallpaperList() {
 
   list.innerHTML = '';
 
-  wallpapers.forEach((src, idx) => {
+  wallpapers.forEach((wp, idx) => {
     const item = document.createElement('div');
     item.className = 'wallpaper-item' + (idx === currentWallpaperIndex ? ' active' : '');
 
-    const img = document.createElement('img');
-    img.src = src;
-    img.alt = '壁纸 ' + (idx + 1);
-    item.appendChild(img);
+    if (wp.type === 'image') {
+      // 图片缩略图
+      const img = document.createElement('img');
+      img.src = wp.url;
+      img.alt = '壁纸 ' + (idx + 1);
+      item.appendChild(img);
+    } else {
+      // 视频缩略图：小尺寸自动播放、静音、循环
+      const video = document.createElement('video');
+      video.className = 'wallpaper-thumb-video';
+      video.src = wp.url;
+      video.autoplay = true;
+      video.loop = true;
+      video.muted = true;
+      video.playsInline = true; // iOS
+      video.setAttribute('playsinline', 'true');
+
+      item.appendChild(video);
+    }
 
     // 点击切换壁纸
     item.addEventListener('click', () => {
@@ -227,25 +270,15 @@ function renderWallpaperList() {
     list.appendChild(item);
   });
 
-  // “添加图片”卡片
+  // “添加壁纸”卡片（图片/视频都可以）
   const addItem = document.createElement('div');
   addItem.className = 'wallpaper-item add-wallpaper';
-
-  const addContent = document.createElement('div');
-  addContent.className = 'add-wallpaper-content';
-
-  const plus = document.createElement('div');
-  plus.className = 'add-wallpaper-plus';
-  plus.textContent = '+';
-
-  const text = document.createElement('div');
-  text.textContent = '添加图片';
-
-  addContent.appendChild(plus);
-  addContent.appendChild(text);
-  addItem.appendChild(addContent);
-  list.appendChild(addItem);
-
+  addItem.innerHTML = `
+    <div class="add-wallpaper-content">
+      <div class="add-wallpaper-plus">+</div>
+      <div>添加壁纸</div>
+    </div>
+  `;
   addItem.addEventListener('click', (e) => {
     e.stopPropagation();
     const fileInput = document.getElementById('wallpaperFileInput');
@@ -254,6 +287,7 @@ function renderWallpaperList() {
       fileInput.click();
     }
   });
+  list.appendChild(addItem);
 }
 
 function toggleWallpaperPanel(show) {
@@ -343,8 +377,6 @@ function bindEngineDropdownEvents() {
   document.addEventListener('click', () => toggleDropdown(false));
 }
 
-  
-
 // ========== 5. 时钟相关 ==========
 
 function updateClock() {
@@ -352,7 +384,7 @@ function updateClock() {
   if (!clockEl) return;
 
   const now = new Date();
-  const h = String(now.getHours()).padStart(2, '0');   // 24 小时制
+  const h = String(now.getHours()).padStart(2, '0');
   const m = String(now.getMinutes()).padStart(2, '0');
   const s = String(now.getSeconds()).padStart(2, '0');
 
@@ -397,67 +429,88 @@ function init() {
     });
   }
 
-  // 本地图片上传
+  // 本地图片/视频上传（自动识别类型）
   const fileInput = document.getElementById('wallpaperFileInput');
   if (fileInput) {
     fileInput.addEventListener('change', (e) => {
       const file = e.target.files && e.target.files[0];
       if (!file) return;
 
-      const MAX_SIZE = 5 * 1024 * 1024;
-      if (file.size > MAX_SIZE) {
-        alert('图片太大了，请选择 5MB 以内的图片。');
-        return;
+      const mime = file.type;
+      const name = file.name.toLowerCase();
+
+      let type = 'image';
+      if (mime.startsWith('video/')) {
+        type = 'video';
+      } else if (!mime && /\.(mp4|webm|mov|avi|mkv)$/i.test(name)) {
+        type = 'video';
+      } else if (mime.startsWith('image/')) {
+        type = 'image';
+      } else if (/\.(png|jpe?g|gif|webp|bmp|apng)$/i.test(name)) {
+        type = 'image';
       }
 
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const dataUrl = ev.target && ev.target.result;
-        if (!dataUrl) return;
+      if (type === 'image') {
+        const MAX_SIZE = 5 * 1024 * 1024;
+        if (file.size > MAX_SIZE) {
+          alert('图片太大了，请选择 5MB 以内的图片。');
+          return;
+        }
 
-        customWallpapers.push(dataUrl);
-        saveCustomWallpapers();
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const dataUrl = ev.target && ev.target.result;
+          if (!dataUrl) return;
+
+          customWallpapers.push({ type: 'image', url: dataUrl });
+          saveCustomWallpapers();
+          rebuildWallpapers();
+
+          currentWallpaperIndex = wallpapers.length - 1;
+          saveWallpaperIndex();
+
+          applyWallpaper(currentWallpaperIndex);
+          renderWallpaperList();
+        };
+
+        reader.readAsDataURL(file);
+      } else {
+        // 视频：使用临时 object URL（当前会话有效）
+        const objectUrl = URL.createObjectURL(file);
+        customWallpapers.push({ type: 'video', url: objectUrl });
         rebuildWallpapers();
-
         currentWallpaperIndex = wallpapers.length - 1;
         saveWallpaperIndex();
-
         applyWallpaper(currentWallpaperIndex);
         renderWallpaperList();
-      };
-
-      reader.readAsDataURL(file);
+      }
     });
   }
 
-   // 搜索引擎
+  // 搜索引擎
   currentEngineKey = localStorage.getItem('currentEngine') || ENGINES[0].key;
   setEngine(currentEngineKey);
   renderEngineDropdown();
   bindSearchForm();
   bindEngineDropdownEvents();
 
-  // 搜索框覆盖层：未聚焦时只显示中间“搜索”
+  // 搜索框覆盖层
   const searchBoxEl = document.getElementById('searchForm');
   const searchInputEl = document.getElementById('q');
   const searchOverlayEl = document.getElementById('searchOverlay');
 
   if (searchBoxEl && searchInputEl && searchOverlayEl) {
-    // 初始为未聚焦状态（只有覆盖层）
     searchBoxEl.classList.remove('focused');
 
-    // 点击覆盖层 -> 进入聚焦模式并聚焦输入框
     searchOverlayEl.addEventListener('click', () => {
       searchBoxEl.classList.add('focused');
       searchInputEl.focus();
     });
 
-    // 输入框获得焦点时，确保是聚焦样式
     searchInputEl.addEventListener('focus', () => {
       searchBoxEl.classList.add('focused');
     });
 
-    // 输入框失焦：若内容为空，则恢复为仅显示“搜索”
     searchInputEl.addEventListener('blur', () => {
       if (!searchInputEl.value.trim()) {
         searchBoxEl.classList.remove('focused');

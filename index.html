@@ -12,6 +12,16 @@
   <!-- 背景层 -->
   <div class="bg" id="bgLayer"></div>
 
+   <!-- 背景视频层：动态壁纸 -->
+  <video
+    id="bgVideo"
+    autoplay
+    muted
+    loop
+    playsinline
+  ></video>
+
+
   <!-- 头部：切换壁纸按钮 -->
   <header class="site-header">
     <div class="wallpaper-area">
@@ -23,25 +33,25 @@
   <main class="center">
     <div class="clock" id="clock">--:--:--</div>
     <form class="search-box" id="searchForm">
-    <!-- 覆盖层：未聚焦时只看到它 -->
-    <div class="search-overlay" id="searchOverlay">
-      搜索
-    </div>
+      <!-- 覆盖层：未聚焦时只看到它 -->
+      <div class="search-overlay" id="searchOverlay">
+        搜索
+      </div>
 
-    <div class="engine-selector" id="engineSelector">
-      <div class="logo" id="engineLogo"></div>
-      <span class="engine-arrow">▾</span>
-      <div class="engine-dropdown" id="engineDropdown"></div>
-    </div>
+      <div class="engine-selector" id="engineSelector">
+        <div class="logo" id="engineLogo"></div>
+        <span class="engine-arrow">▾</span>
+        <div class="engine-dropdown" id="engineDropdown"></div>
+      </div>
 
-    <input
-      class="search-input"
-      id="q"
-      type="search"
-      placeholder="请输入需要搜索的内容"
-      autocomplete="off"
-    />
-    <button class="search-btn" type="submit">搜索</button>
+      <input
+        class="search-input"
+        id="q"
+        type="search"
+        placeholder="请输入需要搜索的内容"
+        autocomplete="off"
+      />
+      <button class="search-btn" type="submit">搜索</button>
     </form>
   </main>
 
@@ -54,15 +64,16 @@
   <!-- 左侧壁纸面板 -->
   <aside class="wallpaper-panel" id="wallpaperPanel" aria-hidden="true">
     <div class="wallpaper-panel-inner">
+      <!-- 壁纸缩略图列表 -->
       <div class="wallpaper-list" id="wallpaperList"></div>
     </div>
   </aside>
 
-  <!-- 隐藏的本地图片选择控件 -->
+  <!-- 隐藏的本地图片/视频选择控件 -->
   <input
     type="file"
     id="wallpaperFileInput"
-    accept="image/*"
+    accept="image/*,video/*"
     style="display:none"
   />
 
