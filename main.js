@@ -453,11 +453,20 @@ async function init() {
   customWallpapers = await loadCustomWallpapers();
   rebuildWallpapers();
   currentWallpaperIndex = loadWallpaperIndex();
+  
+  // 确保索引有效
   if (currentWallpaperIndex >= wallpapers.length) {
     currentWallpaperIndex = wallpapers.length ? wallpapers.length - 1 : 0;
   }
+  
+  // 立即应用壁纸，确保页面加载时显示正确的壁纸
   if (wallpapers.length) {
     applyWallpaper(currentWallpaperIndex);
+  } else {
+    // 如果没有壁纸，使用第一张默认壁纸作为 fallback
+    if (INITIAL_DEFAULT_WALLPAPERS.length > 0) {
+      bgLayer.style.backgroundImage = `url('${INITIAL_DEFAULT_WALLPAPERS[0].url}')`;
+    }
   }
 
   renderWallpaperList();
