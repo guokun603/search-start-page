@@ -21,6 +21,12 @@ body {
   background: center/cover no-repeat;
   filter: brightness(0.88);
   z-index: -1;
+  transition: opacity 0.5s ease-in-out;
+}
+
+/* 初始加载时的背景 */
+body {
+  background-color: #fff;
 }
 
 /* 背景视频：默认隐藏，选到视频壁纸时显示 */

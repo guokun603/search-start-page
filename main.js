@@ -187,19 +187,44 @@ function applyWallpaper(index) {
 
   if (wp.type === 'image') {
     // 静态图片背景：显示 bgLayer，隐藏 video
+    bgLayer.style.backgroundImage = `url('${wp.url}')`;
+    bgLayer.style.opacity = '1';
+    
+    // 立即隐藏视频，因为图片加载速度快
     bgVideo.pause();
     bgVideo.removeAttribute('src');
     bgVideo.load();
     bgVideo.style.display = 'none';
-
-    bgLayer.style.backgroundImage = `url('${wp.url}')`;
+    bgVideo.style.opacity = '0';
   } else if (wp.type === 'video') {
-    // 视频背景：显示 video，清空 bgLayer 背景
-    bgLayer.style.backgroundImage = 'none';
-
-    bgVideo.src = wp.url;
-    bgVideo.style.display = 'block';
-    bgVideo.play().catch(() => {});
+    // 视频背景：预加载视频，然后显示
+    const video = document.createElement('video');
+    video.src = wp.url;
+    video.muted = true;
+    video.playsInline = true;
+    
+    // 视频加载完成后再切换
+    video.addEventListener('loadeddata', () => {
+      // 隐藏背景图片
+      bgLayer.style.opacity = '0';
+      
+      // 延迟显示视频，确保过渡效果
+      setTimeout(() => {
+        bgLayer.style.backgroundImage = 'none';
+        bgVideo.src = wp.url;
+        bgVideo.style.display = 'block';
+        bgVideo.style.opacity = '1';
+        bgVideo.play().catch(() => {});
+      }, 300);
+    });
+    
+    // 视频加载失败时的 fallback
+    video.addEventListener('error', () => {
+      console.error('视频加载失败，使用默认背景');
+      bgLayer.style.opacity = '1';
+      bgLayer.style.backgroundImage = `url('${INITIAL_DEFAULT_WALLPAPERS[0].url}')`;
+      bgVideo.style.display = 'none';
+    });
   }
 
   saveWallpaperIndex();
@@ -446,8 +471,32 @@ function updateClock() {
 
 // ========== 6. 初始化入口 ==========
 
+// 预加载壁纸函数
+function preloadWallpaper(wallpaper) {
+  return new Promise((resolve, reject) => {
+    if (wallpaper.type === 'image') {
+      const img = new Image();
+      img.src = wallpaper.url;
+      img.onload = () => resolve();
+      img.onerror = () => reject();
+    } else if (wallpaper.type === 'video') {
+      const video = document.createElement('video');
+      video.src = wallpaper.url;
+      video.muted = true;
+      video.playsInline = true;
+      video.onloadeddata = () => resolve();
+      video.onerror = () => reject();
+    } else {
+      resolve();
+    }
+  });
+}
+
 // 初始化函数 - 修改：使用async/await处理异步操作
 async function init() {
+  // 立即设置初始背景为白色，避免白屏
+  document.body.style.backgroundColor = '#fff';
+  
   // 壁纸状态
   disabledDefaultIndices = loadDisabledDefault();
   customWallpapers = await loadCustomWallpapers();
@@ -461,11 +510,23 @@ async function init() {
   
   // 立即应用壁纸，确保页面加载时显示正确的壁纸
   if (wallpapers.length) {
-    applyWallpaper(currentWallpaperIndex);
+    try {
+      // 预加载当前壁纸
+      await preloadWallpaper(wallpapers[currentWallpaperIndex]);
+      applyWallpaper(currentWallpaperIndex);
+    } catch (error) {
+      console.error('壁纸预加载失败，使用默认壁纸');
+      // 预加载失败时使用默认壁纸
+      if (INITIAL_DEFAULT_WALLPAPERS.length > 0) {
+        bgLayer.style.backgroundImage = `url('${INITIAL_DEFAULT_WALLPAPERS[0].url}')`;
+        bgLayer.style.opacity = '1';
+      }
+    }
   } else {
     // 如果没有壁纸，使用第一张默认壁纸作为 fallback
     if (INITIAL_DEFAULT_WALLPAPERS.length > 0) {
       bgLayer.style.backgroundImage = `url('${INITIAL_DEFAULT_WALLPAPERS[0].url}')`;
+      bgLayer.style.opacity = '1';
     }
   }
 
