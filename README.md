@@ -1,7 +1,7 @@
 # 🔍 个人搜索起始页
 
 <div align="center">
-  <img src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1920&q=80" alt="搜索起始页预览" width="600">
+  <img src="https://gxpdev.dpdns.org/PicGo/Snipaste_2026-02-27_22-20-33.png" alt="搜索起始页预览" width="600">
   <p>一个简洁、美观、可自定义的浏览器起始页，支持多搜索引擎切换、动态壁纸和本地持久化存储。</p>
   
   <div>
@@ -189,8 +189,8 @@ localStorage.clear();
 ## 👤 作者
 
 **郭小胖**
-- GitHub: [@yourusername](https://github.com/yourusername)
-- 网站: [https://guokun.net](https://guokun.net)
+- GitHub: [@郭小胖](https://github.com/guokun603/)
+- 网站: [https://search.guokun.net/](https://search.guokun.net/)
 
 ---
 
