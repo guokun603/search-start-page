@@ -40,6 +40,9 @@ const DB_NAME     = 'wallpaperDB';
 const DB_VERSION  = 1;
 const STORE_NAME  = 'customWallpapers';
 
+// 缓存 DB 连接，避免每次操作都重新打开
+let _dbPromise = null;
+
 // 状态
 let disabledDefaultIndices = [];
 let customWallpapers = []; // [{type:'image'|'video', url:string}]
@@ -75,7 +78,8 @@ function saveDisabledDefault() {
 
 // 打开IndexedDB数据库 - 新增：用于存储视频壁纸
 function openDB() {
-  return new Promise((resolve, reject) => {
+  if (_dbPromise) return _dbPromise;
+  _dbPromise = new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
     
     request.onupgradeneeded = (event) => {
@@ -90,9 +94,11 @@ function openDB() {
     };
     
     request.onerror = (event) => {
+      _dbPromise = null; // 失败时清除缓存，下次可重试
       reject(event.target.error);
     };
   });
+  return _dbPromise;
 }
 
 // 加载自定义壁纸 - 修改：使用IndexedDB替代localStorage，支持存储视频
@@ -116,6 +122,7 @@ async function loadCustomWallpapers() {
       };
     });
   } catch (e) {
+    _dbPromise = null; // 连接失败时清除缓存，下次可重试
     console.error('打开数据库失败:', e);
     return [];
   }
@@ -148,6 +155,7 @@ async function saveCustomWallpapers() {
       };
     });
   } catch (e) {
+    _dbPromise = null; // 连接失败时清除缓存，下次可重试
     console.error('打开数据库失败:', e);
     return false;
   }
@@ -164,6 +172,24 @@ function saveWallpaperIndex() {
 }
 
 // ========== 3. 壁纸列表构建 & 应用 ==========
+
+// 捕获视频当前帧作为缓存背景（供下次打开页面时立即显示）
+function captureVideoFrame(video) {
+  try {
+    const vw = video.videoWidth;
+    const vh = video.videoHeight;
+    if (!vw || !vh) return null;
+    const MAX_W = 640, MAX_H = 360;
+    const ratio = Math.min(MAX_W / vw, MAX_H / vh, 1);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(vw * ratio);
+    canvas.height = Math.round(vh * ratio);
+    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', 0.75);
+  } catch (e) {
+    return null;
+  }
+}
 
 function buildCurrentDefaultWallpapers() {
   return INITIAL_DEFAULT_WALLPAPERS.filter(
@@ -199,36 +225,43 @@ function applyWallpaper(index) {
     bgVideo.style.display = 'none';
     bgVideo.style.opacity = '0';
   } else if (wp.type === 'video') {
-    // 切换到视频壁纸时清除图片缓存
-    try { localStorage.removeItem('bgCache'); } catch (e) { console.warn('Failed to clear wallpaper cache:', e); }
-    // 视频背景：预加载视频，然后显示
-    const video = document.createElement('video');
-    video.src = wp.url;
-    video.muted = true;
-    video.playsInline = true;
-    
-    // 视频加载完成后再切换
-    video.addEventListener('loadeddata', () => {
-      // 隐藏背景图片
+    // 视频背景：直接在 bgVideo 上设置 src，使用 canplay 事件尽早显示
+    // 不清除 bgCache——保留上次缓存的帧，让页面重新打开时立即有背景可见
+    bgVideo.oncanplay = null;
+    bgVideo.onerror = null;
+    bgVideo.pause();
+    bgVideo.src = wp.url;
+    bgVideo.style.display = 'block';
+    bgVideo.style.opacity = '0';
+
+    bgVideo.oncanplay = () => {
+      bgVideo.oncanplay = null;
+      bgVideo.style.opacity = '1';
+      bgVideo.play().catch(() => {});
+
+      // 捕获当前帧并缓存，供下次打开页面时立即显示（消除黑屏等待）
+      try {
+        const frame = captureVideoFrame(bgVideo);
+        if (frame) {
+          localStorage.setItem('bgCache', frame);
+        }
+      } catch (e) {}
+
+      // 视频已可见后淡出静态背景层
       bgLayer.style.opacity = '0';
-      
-      // 延迟显示视频，确保过渡效果
-      setTimeout(() => {
-        bgLayer.style.backgroundImage = 'none';
-        bgVideo.src = wp.url;
-        bgVideo.style.display = 'block';
-        bgVideo.style.opacity = '1';
-        bgVideo.play().catch(() => {});
-      }, 300);
-    });
-    
-    // 视频加载失败时的 fallback
-    video.addEventListener('error', () => {
+      setTimeout(() => { bgLayer.style.backgroundImage = 'none'; }, 500);
+    };
+
+    bgVideo.onerror = () => {
+      bgVideo.onerror = null;
       console.error('视频加载失败，使用默认背景');
       bgLayer.style.opacity = '1';
       bgLayer.style.backgroundImage = `url('${INITIAL_DEFAULT_WALLPAPERS[0].url}')`;
       bgVideo.style.display = 'none';
-    });
+      bgVideo.style.opacity = '0';
+    };
+
+    bgVideo.load();
   }
 
   saveWallpaperIndex();
@@ -624,6 +657,19 @@ async function init() {
   // 时钟
   updateClock();
   setInterval(updateClock, 1000);
+
+  // 页面隐藏时刷新视频帧缓存，让下次打开显示最新帧
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' &&
+        bgVideo && bgVideo.style.display !== 'none' &&
+        !bgVideo.paused) {
+      try {
+        // 捕获当前播放位置的帧，比 canplay 时保存的首帧更贴近用户最后看到的画面
+        const frame = captureVideoFrame(bgVideo);
+        if (frame) localStorage.setItem('bgCache', frame);
+      } catch (e) {}
+    }
+  });
 }
 
 // 调用初始化函数

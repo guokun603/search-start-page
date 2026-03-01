@@ -38,6 +38,7 @@ body {
   object-fit: cover;    /* 铺满并裁剪 */
   z-index: -1;          /* 在内容后面，和 .bg 一样层级 */
   display: none;        /* 默认不显示，选到 video 时再显示 */
+  transition: opacity 0.5s ease-in-out;
 }
 
 /* ========== 2. 头部：壁纸按钮区域 ========== */
