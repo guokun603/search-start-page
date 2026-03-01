@@ -189,6 +189,8 @@ function applyWallpaper(index) {
     // 静态图片背景：显示 bgLayer，隐藏 video
     bgLayer.style.backgroundImage = `url('${wp.url}')`;
     bgLayer.style.opacity = '1';
+    // 缓存当前图片 URL，供下次打开标签时即时恢复，消除白屏
+    try { localStorage.setItem('bgCache', wp.url); } catch (e) { console.warn('Failed to cache wallpaper:', e); }
     
     // 立即隐藏视频，因为图片加载速度快
     bgVideo.pause();
@@ -197,6 +199,8 @@ function applyWallpaper(index) {
     bgVideo.style.display = 'none';
     bgVideo.style.opacity = '0';
   } else if (wp.type === 'video') {
+    // 切换到视频壁纸时清除图片缓存
+    try { localStorage.removeItem('bgCache'); } catch (e) { console.warn('Failed to clear wallpaper cache:', e); }
     // 视频背景：预加载视频，然后显示
     const video = document.createElement('video');
     video.src = wp.url;
@@ -471,32 +475,8 @@ function updateClock() {
 
 // ========== 6. 初始化入口 ==========
 
-// 预加载壁纸函数
-function preloadWallpaper(wallpaper) {
-  return new Promise((resolve, reject) => {
-    if (wallpaper.type === 'image') {
-      const img = new Image();
-      img.src = wallpaper.url;
-      img.onload = () => resolve();
-      img.onerror = () => reject();
-    } else if (wallpaper.type === 'video') {
-      const video = document.createElement('video');
-      video.src = wallpaper.url;
-      video.muted = true;
-      video.playsInline = true;
-      video.onloadeddata = () => resolve();
-      video.onerror = () => reject();
-    } else {
-      resolve();
-    }
-  });
-}
-
 // 初始化函数 - 修改：使用async/await处理异步操作
 async function init() {
-  // 立即设置初始背景为白色，避免白屏
-  document.body.style.backgroundColor = '#fff';
-  
   // 壁纸状态
   disabledDefaultIndices = loadDisabledDefault();
   customWallpapers = await loadCustomWallpapers();
@@ -508,20 +488,9 @@ async function init() {
     currentWallpaperIndex = wallpapers.length ? wallpapers.length - 1 : 0;
   }
   
-  // 立即应用壁纸，确保页面加载时显示正确的壁纸
+  // 立即应用壁纸，不等待预加载（浏览器会在后台加载图片/视频）
   if (wallpapers.length) {
-    try {
-      // 预加载当前壁纸
-      await preloadWallpaper(wallpapers[currentWallpaperIndex]);
-      applyWallpaper(currentWallpaperIndex);
-    } catch (error) {
-      console.error('壁纸预加载失败，使用默认壁纸');
-      // 预加载失败时使用默认壁纸
-      if (INITIAL_DEFAULT_WALLPAPERS.length > 0) {
-        bgLayer.style.backgroundImage = `url('${INITIAL_DEFAULT_WALLPAPERS[0].url}')`;
-        bgLayer.style.opacity = '1';
-      }
-    }
+    applyWallpaper(currentWallpaperIndex);
   } else {
     // 如果没有壁纸，使用第一张默认壁纸作为 fallback
     if (INITIAL_DEFAULT_WALLPAPERS.length > 0) {

@@ -24,9 +24,9 @@ body {
   transition: opacity 0.5s ease-in-out;
 }
 
-/* 初始加载时的背景 */
+/* 初始加载时的背景（深色避免白屏闪烁） */
 body {
-  background-color: #fff;
+  background-color: #000;
 }
 
 /* 背景视频：默认隐藏，选到视频壁纸时显示 */
