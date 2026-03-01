@@ -5,6 +5,20 @@
   <title>搜索主页</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+  <!-- 快速背景预载：在样式表解析前立即应用上次壁纸，消除白屏闪烁 -->
+  <script>
+    (function () {
+      try {
+        var u = localStorage.getItem('bgCache');
+        if (u && (u.startsWith('https://') || u.startsWith('http://') || u.startsWith('data:image/'))) {
+          var s = document.createElement('style');
+          s.textContent = 'html{background:url("' + u.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '") center/cover no-repeat fixed}';
+          document.head.appendChild(s);
+        }
+      } catch (e) {}
+    }());
+  </script>
+
   <!-- 样式 -->
   <link rel="stylesheet" href="styles.css" />
 </head>
