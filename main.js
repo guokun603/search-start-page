@@ -165,6 +165,24 @@ function saveWallpaperIndex() {
 
 // ========== 3. 壁纸列表构建 & 应用 ==========
 
+// 捕获视频当前帧作为缓存背景（供下次打开页面时立即显示）
+function captureVideoFrame(video) {
+  try {
+    const vw = video.videoWidth;
+    const vh = video.videoHeight;
+    if (!vw || !vh) return null;
+    const MAX_W = 640, MAX_H = 360;
+    const ratio = Math.min(MAX_W / vw, MAX_H / vh, 1);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(vw * ratio);
+    canvas.height = Math.round(vh * ratio);
+    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', 0.75);
+  } catch (e) {
+    return null;
+  }
+}
+
 function buildCurrentDefaultWallpapers() {
   return INITIAL_DEFAULT_WALLPAPERS.filter(
     (_, idx) => !disabledDefaultIndices.includes(idx),
@@ -199,36 +217,43 @@ function applyWallpaper(index) {
     bgVideo.style.display = 'none';
     bgVideo.style.opacity = '0';
   } else if (wp.type === 'video') {
-    // 切换到视频壁纸时清除图片缓存
-    try { localStorage.removeItem('bgCache'); } catch (e) { console.warn('Failed to clear wallpaper cache:', e); }
-    // 视频背景：预加载视频，然后显示
-    const video = document.createElement('video');
-    video.src = wp.url;
-    video.muted = true;
-    video.playsInline = true;
-    
-    // 视频加载完成后再切换
-    video.addEventListener('loadeddata', () => {
-      // 隐藏背景图片
+    // 视频背景：直接在 bgVideo 上设置 src，使用 canplay 事件尽早显示
+    // 不清除 bgCache——保留上次缓存的帧，让页面重新打开时立即有背景可见
+    bgVideo.oncanplay = null;
+    bgVideo.onerror = null;
+    bgVideo.pause();
+    bgVideo.src = wp.url;
+    bgVideo.style.display = 'block';
+    bgVideo.style.opacity = '0';
+
+    bgVideo.oncanplay = () => {
+      bgVideo.oncanplay = null;
+      bgVideo.style.opacity = '1';
+      bgVideo.play().catch(() => {});
+
+      // 捕获当前帧并缓存，供下次打开页面时立即显示（消除黑屏等待）
+      try {
+        const frame = captureVideoFrame(bgVideo);
+        if (frame) {
+          localStorage.setItem('bgCache', frame);
+        }
+      } catch (e) {}
+
+      // 视频已可见后淡出静态背景层
       bgLayer.style.opacity = '0';
-      
-      // 延迟显示视频，确保过渡效果
-      setTimeout(() => {
-        bgLayer.style.backgroundImage = 'none';
-        bgVideo.src = wp.url;
-        bgVideo.style.display = 'block';
-        bgVideo.style.opacity = '1';
-        bgVideo.play().catch(() => {});
-      }, 300);
-    });
-    
-    // 视频加载失败时的 fallback
-    video.addEventListener('error', () => {
+      setTimeout(() => { bgLayer.style.backgroundImage = 'none'; }, 500);
+    };
+
+    bgVideo.onerror = () => {
+      bgVideo.onerror = null;
       console.error('视频加载失败，使用默认背景');
       bgLayer.style.opacity = '1';
       bgLayer.style.backgroundImage = `url('${INITIAL_DEFAULT_WALLPAPERS[0].url}')`;
       bgVideo.style.display = 'none';
-    });
+      bgVideo.style.opacity = '0';
+    };
+
+    bgVideo.load();
   }
 
   saveWallpaperIndex();
