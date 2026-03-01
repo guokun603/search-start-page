@@ -40,6 +40,9 @@ const DB_NAME     = 'wallpaperDB';
 const DB_VERSION  = 1;
 const STORE_NAME  = 'customWallpapers';
 
+// 缓存 DB 连接，避免每次操作都重新打开
+let _dbPromise = null;
+
 // 状态
 let disabledDefaultIndices = [];
 let customWallpapers = []; // [{type:'image'|'video', url:string}]
@@ -75,7 +78,8 @@ function saveDisabledDefault() {
 
 // 打开IndexedDB数据库 - 新增：用于存储视频壁纸
 function openDB() {
-  return new Promise((resolve, reject) => {
+  if (_dbPromise) return _dbPromise;
+  _dbPromise = new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
     
     request.onupgradeneeded = (event) => {
@@ -90,9 +94,11 @@ function openDB() {
     };
     
     request.onerror = (event) => {
+      _dbPromise = null; // 失败时清除缓存，下次可重试
       reject(event.target.error);
     };
   });
+  return _dbPromise;
 }
 
 // 加载自定义壁纸 - 修改：使用IndexedDB替代localStorage，支持存储视频
@@ -116,6 +122,7 @@ async function loadCustomWallpapers() {
       };
     });
   } catch (e) {
+    _dbPromise = null; // 连接失败时清除缓存，下次可重试
     console.error('打开数据库失败:', e);
     return [];
   }
@@ -148,6 +155,7 @@ async function saveCustomWallpapers() {
       };
     });
   } catch (e) {
+    _dbPromise = null; // 连接失败时清除缓存，下次可重试
     console.error('打开数据库失败:', e);
     return false;
   }
@@ -649,6 +657,19 @@ async function init() {
   // 时钟
   updateClock();
   setInterval(updateClock, 1000);
+
+  // 页面隐藏时刷新视频帧缓存，让下次打开显示最新帧
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' &&
+        bgVideo && bgVideo.style.display !== 'none' &&
+        !bgVideo.paused) {
+      try {
+        // 捕获当前播放位置的帧，比 canplay 时保存的首帧更贴近用户最后看到的画面
+        const frame = captureVideoFrame(bgVideo);
+        if (frame) localStorage.setItem('bgCache', frame);
+      } catch (e) {}
+    }
+  });
 }
 
 // 调用初始化函数

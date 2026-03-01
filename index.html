@@ -25,6 +25,22 @@
 <body>
   <!-- 背景层 -->
   <div class="bg" id="bgLayer"></div>
+  <!-- 立即将缓存背景应用到 bgLayer，消除 JS 初始化期间的黑屏 -->
+  <script>
+    (function () {
+      try {
+        var u = localStorage.getItem('bgCache');
+        // 只允许已知安全的 URL 格式：data:image/ 的 base64（无特殊字符）和 http(s) URL
+        var safe = u && (
+          (u.startsWith('data:image/') && /^data:image\/[a-z]+;base64,[A-Za-z0-9+/=]+$/.test(u)) ||
+          (u.startsWith('https://') || u.startsWith('http://')) && /^https?:\/\/[^\s"'\\<>]+$/.test(u)
+        );
+        if (safe) {
+          document.getElementById('bgLayer').style.backgroundImage = 'url("' + u + '")';
+        }
+      } catch (e) {}
+    }());
+  </script>
 
    <!-- 背景视频层：动态壁纸 -->
   <video
