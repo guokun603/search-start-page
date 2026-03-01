@@ -76,7 +76,7 @@ function saveDisabledDefault() {
   }
 }
 
-// 打开IndexedDB数据库 - 新增：用于存储视频壁纸
+// 打开IndexedDB数据库
 function openDB() {
   if (_dbPromise) return _dbPromise;
   _dbPromise = new Promise((resolve, reject) => {
@@ -101,7 +101,7 @@ function openDB() {
   return _dbPromise;
 }
 
-// 加载自定义壁纸 - 修改：使用IndexedDB替代localStorage，支持存储视频
+// 加载自定义壁纸
 async function loadCustomWallpapers() {
   try {
     const db = await openDB();
@@ -112,7 +112,6 @@ async function loadCustomWallpapers() {
       
       request.onsuccess = (event) => {
         const wallpapers = event.target.result || [];
-        console.log('从IndexedDB加载自定义壁纸:', wallpapers);
         resolve(wallpapers);
       };
       
@@ -128,7 +127,7 @@ async function loadCustomWallpapers() {
   }
 }
 
-// 保存自定义壁纸 - 修改：使用IndexedDB替代localStorage，支持存储视频
+// 保存自定义壁纸
 async function saveCustomWallpapers() {
   try {
     const db = await openDB();
@@ -145,7 +144,6 @@ async function saveCustomWallpapers() {
       });
       
       transaction.oncomplete = () => {
-        console.log('保存自定义壁纸成功');
         resolve(true);
       };
       
@@ -526,7 +524,7 @@ function updateClock() {
 
 // ========== 6. 初始化入口 ==========
 
-// 初始化函数 - 修改：使用async/await处理异步操作
+// 初始化函数
 async function init() {
   // 壁纸状态
   disabledDefaultIndices = loadDisabledDefault();
@@ -619,7 +617,7 @@ async function init() {
 
         reader.readAsDataURL(file);
       } else {
-        // 视频：使用 FileReader 读取为 dataURL 以便持久保存 - 修改：支持视频持久化存储
+        // 视频：使用 FileReader 读取为 dataURL 以便持久保存
         const reader = new FileReader();
         reader.onload = async (ev) => {
           const dataUrl = ev.target && ev.target.result;
