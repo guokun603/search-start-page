@@ -465,6 +465,17 @@ function bindSearchForm() {
   const form = document.getElementById('searchForm');
   if (!form) return;
 
+  // Prevent the input from blurring when the search button is clicked.
+  // Without this, mousedown on the button fires blur on the input; if the
+  // input is empty the .focused class is removed, making the engine selector
+  // pointer-events:none before the click can register.
+  const btn = form.querySelector('.search-btn');
+  if (btn) {
+    btn.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+    });
+  }
+
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     const input = document.getElementById('q');
@@ -484,6 +495,13 @@ function bindSearchForm() {
 function bindEngineDropdownEvents() {
   const selector = document.getElementById('engineSelector');
   if (selector) {
+    // Prevent the input from losing focus (blur) when clicking the engine selector
+    // or any of its children (dropdown items). Without this, blur fires first and
+    // removes the .focused class, setting pointer-events:none before the click
+    // can register, making the dropdown inaccessible when the input is empty.
+    selector.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+    });
     selector.addEventListener('click', (e) => {
       e.stopPropagation();
       toggleDropdown();

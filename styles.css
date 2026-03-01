@@ -228,6 +228,7 @@ body {
 
 .engine-dropdown.open {
   display: block;
+  pointer-events: auto; /* Override inherited pointer-events:none from parent when unfocused */
 }
 
 .engine-item {
