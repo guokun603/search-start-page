@@ -1,0 +1,29 @@
+{
+  "name": "search-start-page",
+  "version": "1.0.0",
+  "description": "<div align=\"center\">   <img src=\"https://gxpdev.dpdns.org/PicGo/Snipaste_2026-02-27_22-20-33.png\" alt=\"搜索起始页预览\" width=\"600\">   <p>一个简洁、美观、可自定义的浏览器起始页，支持多搜索引擎切换、动态壁纸和本地持久化存储。</p>",
+  "main": "main.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "testMatch": ["**/tests/**/*.test.js"]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/guokun603/search-start-page.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/guokun603/search-start-page/issues"
+  },
+  "homepage": "https://github.com/guokun603/search-start-page#readme",
+  "devDependencies": {
+    "jest": "^30.2.0",
+    "jest-environment-jsdom": "^30.2.0"
+  }
+}
