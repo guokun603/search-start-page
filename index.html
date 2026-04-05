@@ -36,7 +36,21 @@
           (u.startsWith('https://') || u.startsWith('http://')) && /^https?:\/\/[^\s"'\\<>]+$/.test(u)
         );
         if (safe) {
-          document.getElementById('bgLayer').style.backgroundImage = 'url("' + u + '")';
+          var layer = document.getElementById('bgLayer');
+          if (layer) {
+            // 先应用缓存 URL 以立即恢复背景，再异步探测图片是否真的可加载
+            layer.style.backgroundImage = 'url("' + u + '")';
+            var probe = new Image();
+            probe.onload = function () {
+              // 图片加载成功，背景已正确显示，无需额外操作
+            };
+            probe.onerror = function () {
+              // 图片加载失败（网络不通等），清除缓存并隐藏 bgLayer，让 CSS 渐变兜底背景显示
+              layer.style.backgroundImage = 'none';
+              try { localStorage.removeItem('bgCache'); } catch (e) {}
+            };
+            probe.src = u;
+          }
         }
       } catch (e) {}
     }());

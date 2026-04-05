@@ -24,9 +24,9 @@ body {
   transition: opacity 0.5s ease-in-out;
 }
 
-/* 初始加载时的背景（深色避免白屏闪烁） */
+/* 初始加载时的背景（渐变色兜底，避免图片无法加载时出现黑屏） */
 body {
-  background-color: #000;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
 }
 
 /* 背景视频：默认隐藏，选到视频壁纸时显示 */
