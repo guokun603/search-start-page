@@ -173,6 +173,22 @@ function saveWallpaperIndex() {
 
 // ========== 3. 壁纸列表构建 & 应用 ==========
 
+// 探测图片 URL 是否可达，成功则应用到 bgLayer，失败则显示 CSS 渐变兜底背景
+function applyBgImageWithFallback(url, { onLoad, onError } = {}) {
+  const img = new Image();
+  img.onload = () => {
+    bgLayer.style.backgroundImage = `url('${url}')`;
+    bgLayer.style.opacity = '1';
+    if (onLoad) onLoad();
+  };
+  img.onerror = () => {
+    bgLayer.style.backgroundImage = 'none';
+    bgLayer.style.opacity = '0';
+    if (onError) onError();
+  };
+  img.src = url;
+}
+
 // 捕获视频当前帧作为缓存背景（供下次打开页面时立即显示）
 function captureVideoFrame(video) {
   try {
@@ -212,18 +228,21 @@ function applyWallpaper(index) {
   if (!bgLayer || !bgVideo) return;
 
   if (wp.type === 'image') {
-    // 静态图片背景：显示 bgLayer，隐藏 video
-    bgLayer.style.backgroundImage = `url('${wp.url}')`;
-    bgLayer.style.opacity = '1';
-    // 缓存当前图片 URL，供下次打开标签时即时恢复，消除白屏
-    try { localStorage.setItem('bgCache', wp.url); } catch (e) { console.warn('Failed to cache wallpaper:', e); }
-    
-    // 立即隐藏视频，因为图片加载速度快
+    // 静态图片背景：隐藏 video，用 Image 对象检测图片是否可访问
     bgVideo.pause();
     bgVideo.removeAttribute('src');
     bgVideo.load();
     bgVideo.style.display = 'none';
     bgVideo.style.opacity = '0';
+
+    applyBgImageWithFallback(wp.url, {
+      onLoad: () => {
+        try { localStorage.setItem('bgCache', wp.url); } catch (e) { console.warn('Failed to cache wallpaper:', e); }
+      },
+      onError: () => {
+        try { localStorage.removeItem('bgCache'); } catch (e) {}
+      },
+    });
   } else if (wp.type === 'video') {
     // 视频背景：直接在 bgVideo 上设置 src，使用 canplay 事件尽早显示
     // 不清除 bgCache——保留上次缓存的帧，让页面重新打开时立即有背景可见
@@ -254,11 +273,17 @@ function applyWallpaper(index) {
 
     bgVideo.onerror = () => {
       bgVideo.onerror = null;
-      console.error('视频加载失败，使用默认背景');
-      bgLayer.style.opacity = '1';
-      bgLayer.style.backgroundImage = `url('${INITIAL_DEFAULT_WALLPAPERS[0].url}')`;
+      console.error('视频加载失败，显示渐变兜底背景');
       bgVideo.style.display = 'none';
       bgVideo.style.opacity = '0';
+      // 用 Image 对象检测兜底图片是否可访问，避免再次出现黑屏
+      const fallbackUrl = INITIAL_DEFAULT_WALLPAPERS[0] && INITIAL_DEFAULT_WALLPAPERS[0].url;
+      if (fallbackUrl) {
+        applyBgImageWithFallback(fallbackUrl);
+      } else {
+        bgLayer.style.backgroundImage = 'none';
+        bgLayer.style.opacity = '0';
+      }
     };
 
     bgVideo.load();
@@ -543,10 +568,9 @@ async function init() {
   if (wallpapers.length) {
     applyWallpaper(currentWallpaperIndex);
   } else {
-    // 如果没有壁纸，使用第一张默认壁纸作为 fallback
+    // 如果没有壁纸，尝试加载第一张默认壁纸，失败则显示渐变兜底背景
     if (INITIAL_DEFAULT_WALLPAPERS.length > 0) {
-      bgLayer.style.backgroundImage = `url('${INITIAL_DEFAULT_WALLPAPERS[0].url}')`;
-      bgLayer.style.opacity = '1';
+      applyBgImageWithFallback(INITIAL_DEFAULT_WALLPAPERS[0].url);
     }
   }
 
