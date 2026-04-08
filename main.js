@@ -277,7 +277,7 @@ function applyWallpaper(index) {
       bgVideo.style.display = 'none';
       bgVideo.style.opacity = '0';
       // 用 Image 对象检测兜底图片是否可访问，避免再次出现黑屏
-      const fallbackUrl = INITIAL_DEFAULT_WALLPAPERS[0] && INITIAL_DEFAULT_WALLPAPERS[0].url;
+      const fallbackUrl = INITIAL_DEFAULT_WALLPAPERS[0]?.url;
       if (fallbackUrl) {
         applyBgImageWithFallback(fallbackUrl);
       } else {
