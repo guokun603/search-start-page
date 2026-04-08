@@ -45,8 +45,7 @@
               // 图片加载成功，背景已正确显示，无需额外操作
             };
             probe.onerror = function () {
-              // 图片加载失败（网络不通等），清除缓存并隐藏 bgLayer，让 CSS 渐变兜底背景显示
-              layer.style.backgroundImage = 'none';
+              // 图片加载失败（网络不通等），清除失效缓存；main.js 会负责设置正确的背景
               try { localStorage.removeItem('bgCache'); } catch (e) {}
             };
             probe.src = u;

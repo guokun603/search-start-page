@@ -42,6 +42,7 @@ const STORE_NAME  = 'customWallpapers';
 
 // 缓存 DB 连接，避免每次操作都重新打开
 let _dbPromise = null;
+let _pendingBgImg = null; // 当前正在探测的 Image 对象，用于取消过期请求
 
 // 状态
 let disabledDefaultIndices = [];
@@ -174,14 +175,26 @@ function saveWallpaperIndex() {
 // ========== 3. 壁纸列表构建 & 应用 ==========
 
 // 探测图片 URL 是否可达，成功则应用到 bgLayer，失败则显示 CSS 渐变兜底背景
+// 取消之前尚未完成的请求，防止过期的 onerror 覆盖新壁纸
 function applyBgImageWithFallback(url, { onLoad, onError } = {}) {
+  if (_pendingBgImg) {
+    _pendingBgImg.onload = null;
+    _pendingBgImg.onerror = null;
+  }
+
   const img = new Image();
+  _pendingBgImg = img;
+
   img.onload = () => {
+    if (_pendingBgImg !== img) return;
+    _pendingBgImg = null;
     bgLayer.style.backgroundImage = `url('${url}')`;
     bgLayer.style.opacity = '1';
     if (onLoad) onLoad();
   };
   img.onerror = () => {
+    if (_pendingBgImg !== img) return;
+    _pendingBgImg = null;
     bgLayer.style.backgroundImage = 'none';
     bgLayer.style.opacity = '0';
     if (onError) onError();
